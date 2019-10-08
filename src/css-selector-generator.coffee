@@ -93,7 +93,14 @@ class CssSelectorGenerator
     prefix = if @options.prefix_tag then @getTagSelector element else ''
     id = element.getAttribute 'id'
 
-    id_blacklist = @options.id_blacklist.concat( [ '', /\s/, /^\d/ ] )
+    if typeof @options.id_blacklist is 'function'
+      discriminator = @options.id_blacklist
+    else
+      id_blacklist = @options.id_blacklist.concat( [ '', /\s/, /^\d/ ] )
+      self = @
+      discriminator = ->
+        return self.inList id, id_blacklist
+    
 
     # ID must... exist, not to be empty and not to contain whitespace
     if (
@@ -102,7 +109,7 @@ class CssSelectorGenerator
       id? and
       # ...not be empty
       (id isnt '') and
-      @notInList id, id_blacklist
+      !discriminator(id)
       # ...not contain whitespace
       # not (/\s/.exec id) and
       # ...not start with a number
@@ -115,22 +122,34 @@ class CssSelectorGenerator
 
     null
 
-  notInList: (item, list) ->
-    return not list.find (x) ->
+  inList: (item, list) ->
+    return list.find (x) ->
       return x == item if typeof(x) == 'string'
       return x.exec item
+
+  notInList: (item, list) ->
+    return not @inList item, list
 
   getClassSelectors: (element) ->
     result = []
     class_string = element.getAttribute 'class'
     if class_string?
+      if typeof @options.class_blacklist is 'function'
+        discriminator = @options.class_blacklist
+      else if @options.class_blacklist?
+        self = @
+        discriminator = (klass) ->
+          return ! self.notInList klass, self.options.class_blacklist
+      else
+        discriminator = -> false
+
       # remove multiple whitespaces
       class_string = class_string.replace /\s+/g, ' '
       # trim whitespace
       class_string = class_string.replace /^\s|\s$/g, ''
       if class_string isnt ''
         for item in class_string.split /\s+/
-          if @notInList item, @options.class_blacklist
+          if !discriminator item
             result.push ".#{@sanitizeItem item}"
     result
 

@@ -219,6 +219,14 @@ describe 'CSS Selector Generator', ->
         selector = x.getIdSelector root.firstChild
         expect(selector).toBe null
 
+      it 'should ignore ID if blacklist function returns true', ->
+        discriminator = (id) ->
+          return id.indexOf("Zero") != -1
+        x.setOptions id_blacklist: discriminator
+        root.innerHTML = '<div id="linkZero"></div>'
+        selector = x.getIdSelector root.firstChild
+        expect(selector).toBe null
+
     describe 'class', ->
 
       it 'should get class selectors for an element', ->
@@ -239,6 +247,16 @@ describe 'CSS Selector Generator', ->
       it 'should ignore class selectors given in blacklist as regex', ->
         x.setOptions class_blacklist: [ /classO.*/ ]
         elm = root.querySelector '#linkZero'
+        result = x.getClassSelectors elm
+        expectation = [ '.classTwo', '.classThree']
+        expect(result).toEqual expectation
+        expect(x.getClassSelectors root).toEqual []
+
+      it 'should ignore class selectors given in blacklist as regex', ->
+        discriminator = (klass) ->
+          return klass.indexOf("One") != -1
+        x.setOptions class_blacklist: discriminator
+        elm = root.querySelector '#linkOne'
         result = x.getClassSelectors elm
         expectation = [ '.classTwo', '.classThree']
         expect(result).toEqual expectation
